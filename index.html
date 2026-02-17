@@ -226,7 +226,7 @@
     .header-btns { display: flex; gap: 6px; flex-shrink: 0; }
     .btn-save, .btn-load {
       padding: 7px 11px; border: none; border-radius: 6px;
-      font-size: 13px; font-weight: 700; font-family: var(--font-jp);
+      font-size: 10px; font-weight: 700; font-family: var(--font-jp);
       cursor: pointer; transition: transform 0.15s, opacity 0.15s; white-space: nowrap;
     }
     .btn-save { background: linear-gradient(135deg, var(--btn-save), #00a381); color: white; box-shadow: 0 3px 10px rgba(0,184,148,0.3); }
@@ -455,6 +455,11 @@
     <div class="header-top">
       <button class="btn-back" id="btn-back">◀</button>
       <span class="project-name-display" id="project-name-display">プロジェクト名</span>
+      <div class="autosave-indicator" id="autosave-indicator">✓ 自動保存しました</div>
+    <div class="header-btns">
+        <button class="btn-save" id="btn-save">保存</button>
+        <button class="btn-load" id="btn-load">読込</button>
+      </div>
     </div>
     <div class="header-controls">
       <div class="cut-no-section">
@@ -474,11 +479,7 @@
       </div>
       
     </div>
-    <div class="autosave-indicator" id="autosave-indicator">✓ 自動保存しました</div>
-    <div class="header-btns">
-        <button class="btn-save" id="btn-save">保存</button>
-        <button class="btn-load" id="btn-load">読込</button>
-      </div>
+    
   </div>
 
   <div class="table-wrapper">
