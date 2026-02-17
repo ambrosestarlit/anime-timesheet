@@ -1,0 +1,36 @@
+{
+  "name": "アニメ タイムシート",
+  "short_name": "タイムシート",
+  "description": "アニメ制作支援用タイムシートアプリ",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "orientation": "portrait",
+  "scope": ".",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "新規プロジェクト",
+      "short_name": "新規",
+      "description": "新しいプロジェクトを作成",
+      "url": "."
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "screenshots": []
+}

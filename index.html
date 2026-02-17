@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="タイムシート">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>タイムシート</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #1a1a2e;
+      --bg-secondary: #16213e;
+      --bg-card: #0f3460;
+      --bg-row-even: #1e2a4a;
+      --bg-row-odd: #1a2540;
+      --bg-row-highlight: #2a3a5c;
+      --accent-gold: #f0a500;
+      --accent-cyan: #00d4ff;
+      --accent-green: #00ff88;
+      --accent-red: #ff4757;
+      --text-primary: #e8eaf6;
+      --text-secondary: #90a4ae;
+      --border-color: #2a3a5c;
+      --border-light: #3a4a6c;
+      --header-bg: #0a0f1e;
+      --btn-save: #00b894;
+      --btn-load: #0984e3;
+      --shadow: 0 4px 20px rgba(0,0,0,0.5);
+      --font-mono: 'Share Tech Mono', monospace;
+      --font-jp: 'Noto Sans JP', sans-serif;
+      --row-h: 38px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: var(--font-jp);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 20%, rgba(0,212,255,0.05) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(240,165,0,0.05) 0%, transparent 50%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ===== SCREENS ===== */
+    .screen {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      z-index: 1;
+    }
+    .screen.hidden { opacity: 0; pointer-events: none; transform: scale(0.97); }
+
+    /* ===== WELCOME ===== */
+    #welcome-screen { background: var(--bg-primary); }
+
+    .welcome-header {
+      background: var(--header-bg);
+      padding: 20px 16px 16px;
+      border-bottom: 2px solid var(--accent-cyan);
+      position: relative;
+    }
+    .welcome-header::after {
+      content: ''; position: absolute; bottom: -2px; left: 0;
+      width: 40%; height: 2px; background: var(--accent-gold);
+    }
+    .app-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .logo-mark {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-gold));
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 900; color: var(--bg-primary);
+      font-family: var(--font-mono); flex-shrink: 0;
+    }
+    .app-title { font-size: 20px; font-weight: 700; color: var(--text-primary); letter-spacing: 0.05em; }
+    .app-subtitle { font-size: 11px; color: var(--text-secondary); letter-spacing: 0.15em; margin-top: 2px; padding-left: 46px; }
+
+    .welcome-actions {
+      padding: 12px 16px; display: flex; gap: 10px;
+      background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);
+    }
+    .btn-new-project {
+      flex: 1; padding: 12px;
+      background: linear-gradient(135deg, var(--accent-cyan), #0099cc);
+      border: none; border-radius: 8px; color: var(--bg-primary);
+      font-size: 14px; font-weight: 700; font-family: var(--font-jp);
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+      box-shadow: 0 4px 15px rgba(0,212,255,0.3);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn-new-project:active { transform: scale(0.97); box-shadow: 0 2px 8px rgba(0,212,255,0.2); }
+
+    .project-list-header {
+      padding: 10px 16px 6px; display: flex;
+      align-items: center; justify-content: space-between;
+    }
+    .project-list-title { font-size: 12px; color: var(--text-secondary); letter-spacing: 0.1em; text-transform: uppercase; }
+    .project-count { font-size: 11px; color: var(--accent-cyan); font-family: var(--font-mono); }
+
+    .project-list { flex: 1; overflow-y: auto; padding: 0 12px 20px; }
+    .project-list::-webkit-scrollbar { width: 4px; }
+    .project-list::-webkit-scrollbar-track { background: var(--bg-secondary); }
+    .project-list::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 2px; }
+
+    .project-card {
+      background: var(--bg-secondary); border: 1px solid var(--border-color);
+      border-left: 3px solid var(--accent-gold); border-radius: 8px;
+      padding: 12px 14px; margin-bottom: 8px; cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, transform 0.15s;
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    }
+    .project-card:active { background: var(--bg-row-highlight); transform: scale(0.99); }
+    .project-card:hover { border-color: var(--accent-cyan); border-left-color: var(--accent-cyan); }
+    .project-card-info { flex: 1; min-width: 0; }
+    .project-card-name {
+      font-size: 15px; font-weight: 700; color: var(--text-primary);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .project-card-meta { font-size: 11px; color: var(--text-secondary); margin-top: 3px; font-family: var(--font-mono); }
+    .project-card-arrow { color: var(--accent-cyan); font-size: 18px; flex-shrink: 0; }
+    .project-card-delete {
+      width: 32px; height: 32px; border: none;
+      background: rgba(255,71,87,0.15); border-radius: 6px;
+      color: var(--accent-red); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; transition: background 0.15s; flex-shrink: 0;
+    }
+    .project-card-delete:active { background: rgba(255,71,87,0.3); }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
+    .empty-state-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+    .empty-state-text { font-size: 14px; line-height: 1.6; }
+
+    /* ===== MAIN SCREEN ===== */
+    #main-screen { background: var(--bg-primary); }
+
+    .main-header { background: var(--header-bg); border-bottom: 2px solid var(--border-color); flex-shrink: 0; }
+
+    .header-top {
+      padding: 8px 12px 6px; display: flex;
+      align-items: center; gap: 8px; border-bottom: 1px solid var(--border-color);
+    }
+    .project-name-display {
+      font-size: 13px; font-weight: 700; color: var(--accent-gold);
+      flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .btn-back {
+      width: 32px; height: 32px; border: 1px solid var(--border-light);
+      background: transparent; border-radius: 6px; color: var(--text-secondary);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0; transition: all 0.15s;
+    }
+    .btn-back:active { background: var(--border-color); }
+
+    .header-controls {
+      padding: 8px 12px; display: flex; align-items: center; gap: 6px;
+    }
+
+    /* カットNo + ステッパー */
+    .cut-no-section { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; }
+    .cut-label { font-size: 11px; color: var(--text-secondary); white-space: nowrap; flex-shrink: 0; }
+
+    .cut-stepper {
+      display: flex; align-items: center;
+      background: var(--bg-card); border: 1px solid var(--border-light);
+      border-radius: 6px; overflow: hidden; flex-shrink: 0;
+    }
+    .cut-stepper-btn {
+      width: 26px; height: 30px; border: none;
+      background: transparent; color: var(--accent-cyan);
+      font-size: 18px; font-weight: 900; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.12s; flex-shrink: 0; padding: 0; line-height: 1;
+    }
+    .cut-stepper-btn:active { background: rgba(0,212,255,0.15); }
+    .cut-stepper-btn:disabled { color: var(--border-light); cursor: default; }
+
+    .cut-select {
+      width: 70px; background: transparent; border: none;
+      color: var(--accent-gold); font-size: 13px; font-weight: 700;
+      font-family: var(--font-mono); padding: 4px 2px; text-align: center;
+      cursor: pointer; appearance: none; -webkit-appearance: none;
+    }
+    .cut-select:focus { outline: none; }
+    .cut-select option { background: var(--bg-secondary); color: var(--text-primary); }
+
+    /* カット数 ± コントロール */
+    .cut-count-wrap {
+      display: flex; align-items: center; gap: 2px; flex-shrink: 0;
+      background: var(--bg-secondary); border: 1px solid var(--border-color);
+      border-radius: 6px; padding: 2px 4px;
+    }
+    .cut-count-lbl { font-size: 10px; color: var(--text-secondary); line-height: 1; white-space: nowrap; margin-right: 2px; }
+    .cut-count-btn {
+      width: 22px; height: 22px; border: 1px solid var(--border-light);
+      background: var(--bg-card); border-radius: 4px;
+      color: var(--text-secondary); font-size: 15px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.12s; padding: 0; line-height: 1; flex-shrink: 0;
+    }
+    .cut-count-btn:active { background: var(--border-color); color: var(--text-primary); }
+    .cut-count-btn:disabled { opacity: 0.3; cursor: default; }
+    .cut-count-val {
+      font-size: 12px; font-weight: 700; font-family: var(--font-mono);
+      color: var(--accent-cyan); min-width: 24px; text-align: center;
+    }
+
+    .header-btns { display: flex; gap: 6px; flex-shrink: 0; }
+    .btn-save, .btn-load {
+      padding: 7px 11px; border: none; border-radius: 6px;
+      font-size: 13px; font-weight: 700; font-family: var(--font-jp);
+      cursor: pointer; transition: transform 0.15s, opacity 0.15s; white-space: nowrap;
+    }
+    .btn-save { background: linear-gradient(135deg, var(--btn-save), #00a381); color: white; box-shadow: 0 3px 10px rgba(0,184,148,0.3); }
+    .btn-load { background: linear-gradient(135deg, var(--btn-load), #0773c5); color: white; box-shadow: 0 3px 10px rgba(9,132,227,0.3); }
+    .btn-save:active, .btn-load:active { transform: scale(0.95); opacity: 0.85; }
+
+    .autosave-indicator {
+      font-size: 10px; color: var(--accent-green); text-align: right;
+      padding: 2px 12px 4px; font-family: var(--font-mono);
+      opacity: 0; transition: opacity 0.3s; height: 18px;
+    }
+    .autosave-indicator.visible { opacity: 1; }
+
+    /* ===== VIRTUAL TABLE ===== */
+    .table-wrapper { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+    .table-header {
+      display: grid; grid-template-columns: 68px 54px 46px 1fr;
+      background: var(--bg-card); border-bottom: 2px solid var(--accent-cyan); flex-shrink: 0;
+    }
+    .th {
+      padding: 9px 4px; text-align: center; font-size: 12px;
+      font-weight: 700; color: var(--accent-cyan); letter-spacing: 0.05em;
+      border-right: 1px solid var(--border-color);
+    }
+    .th:last-child { border-right: none; }
+
+    /* 仮想スクロールコンテナ */
+    .vscroll-container {
+      flex: 1; overflow-y: scroll; overflow-x: hidden;
+      -webkit-overflow-scrolling: touch; position: relative;
+    }
+    .vscroll-container::-webkit-scrollbar { width: 4px; }
+    .vscroll-container::-webkit-scrollbar-track { background: var(--bg-secondary); }
+    .vscroll-container::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 2px; }
+
+    .vscroll-spacer { width: 1px; pointer-events: none; }
+
+    .vscroll-viewport {
+      position: absolute; top: 0; left: 0; right: 0;
+      will-change: transform;
+    }
+
+    /* テーブル行 */
+    .table-row {
+      display: grid; grid-template-columns: 68px 54px 46px 1fr;
+      border-bottom: 1px solid var(--border-color);
+      height: 38px; overflow: hidden;
+    }
+    .table-row.even { background: var(--bg-row-even); }
+    .table-row.odd  { background: var(--bg-row-odd); }
+    .table-row.se-start { background: rgba(0,255,136,0.08) !important; }
+    .table-row.se-end   { background: rgba(255,71,87,0.08) !important; }
+
+    .td {
+      padding: 0 4px; display: flex; align-items: center;
+      justify-content: center; border-right: 1px solid var(--border-color); min-width: 0;
+    }
+    .td:last-child { border-right: none; justify-content: flex-start; }
+
+    .td-frame { font-family: var(--font-mono); font-size: 13px; color: var(--accent-gold); user-select: none; }
+
+    .td-voice { cursor: pointer; }
+    .voice-display {
+      font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+      color: var(--accent-cyan); width: 100%; text-align: center; pointer-events: none;
+    }
+    .voice-display.empty { color: var(--border-light); }
+
+    .td-se { cursor: pointer; }
+    .se-btn {
+      width: 100%; height: 38px; border: none; background: transparent;
+      cursor: pointer; font-size: 14px; font-weight: 900; font-family: var(--font-mono);
+      display: flex; align-items: center; justify-content: center; padding: 0;
+    }
+    .se-btn.state-s { color: var(--accent-green); text-shadow: 0 0 10px rgba(0,255,136,0.5); }
+    .se-btn.state-e { color: var(--accent-red); text-shadow: 0 0 10px rgba(255,71,87,0.5); }
+    .se-btn.state-empty { color: transparent; }
+    .se-btn:active { background: rgba(255,255,255,0.05); }
+
+    .td-memo { padding: 0 6px; }
+    .memo-input {
+      width: 100%; background: transparent; border: none;
+      color: var(--text-primary); font-size: 12px; font-family: var(--font-jp); padding: 4px 2px;
+    }
+    .memo-input:focus { outline: 1px solid var(--border-light); border-radius: 3px; background: rgba(255,255,255,0.03); }
+
+    /* ===== VOICE PICKER (ボトムシート) ===== */
+    .voice-picker-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      z-index: 80; display: flex; align-items: flex-end;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+      backdrop-filter: blur(3px);
+    }
+    .voice-picker-overlay.visible { opacity: 1; pointer-events: all; }
+    .voice-picker-sheet {
+      background: var(--bg-secondary); border-top: 2px solid var(--accent-cyan);
+      border-radius: 14px 14px 0 0; width: 100%; padding: 14px 14px 30px;
+      transform: translateY(100%); transition: transform 0.25s ease;
+      max-height: 58vh; display: flex; flex-direction: column;
+    }
+    .voice-picker-overlay.visible .voice-picker-sheet { transform: translateY(0); }
+    .voice-picker-title {
+      font-size: 12px; font-weight: 700; color: var(--text-secondary);
+      text-align: center; margin-bottom: 10px; letter-spacing: 0.1em;
+    }
+    .voice-picker-grid {
+      display: grid; grid-template-columns: repeat(6, 1fr);
+      gap: 5px; overflow-y: auto; flex: 1;
+    }
+    .voice-picker-grid::-webkit-scrollbar { width: 4px; }
+    .voice-picker-grid::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 2px; }
+    .voice-picker-item {
+      padding: 7px 2px; text-align: center;
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: 5px; font-size: 11px; font-family: var(--font-mono);
+      color: var(--text-primary); cursor: pointer; transition: all 0.1s;
+    }
+    .voice-picker-item:active { background: var(--accent-cyan); color: var(--bg-primary); }
+    .voice-picker-item.selected { border-color: var(--accent-cyan); color: var(--accent-cyan); font-weight: 700; }
+    .voice-picker-clear {
+      margin-top: 8px; width: 100%; padding: 9px;
+      background: rgba(255,71,87,0.12); border: 1px solid rgba(255,71,87,0.35);
+      border-radius: 8px; color: var(--accent-red);
+      font-size: 13px; font-weight: 700; font-family: var(--font-jp); cursor: pointer;
+    }
+
+    /* ===== MODALS ===== */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+      z-index: 100; display: flex; align-items: center; justify-content: center;
+      padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+      backdrop-filter: blur(4px);
+    }
+    .modal-overlay.visible { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--bg-secondary); border: 1px solid var(--border-light);
+      border-top: 3px solid var(--accent-cyan); border-radius: 12px;
+      padding: 24px 20px; width: 100%; max-width: 360px;
+      box-shadow: var(--shadow); transform: translateY(10px); transition: transform 0.2s;
+    }
+    .modal-overlay.visible .modal { transform: translateY(0); }
+    .modal-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 16px; }
+    .modal-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; display: block; }
+    .modal-input {
+      width: 100%; background: var(--bg-primary); border: 1px solid var(--border-light);
+      border-radius: 8px; color: var(--text-primary); font-size: 15px;
+      font-family: var(--font-jp); padding: 10px 12px; margin-bottom: 16px;
+    }
+    .modal-input:focus { outline: none; border-color: var(--accent-cyan); }
+    .modal-btns { display: flex; gap: 10px; }
+    .btn-modal-cancel {
+      flex: 1; padding: 10px; border: 1px solid var(--border-light);
+      background: transparent; border-radius: 8px; color: var(--text-secondary);
+      font-size: 14px; font-family: var(--font-jp); cursor: pointer;
+    }
+    .btn-modal-ok {
+      flex: 1; padding: 10px; border: none;
+      background: linear-gradient(135deg, var(--accent-cyan), #0099cc);
+      border-radius: 8px; color: var(--bg-primary); font-size: 14px;
+      font-weight: 700; font-family: var(--font-jp); cursor: pointer;
+    }
+    .confirm-modal .modal { border-top-color: var(--accent-red); }
+    .confirm-modal .btn-modal-ok { background: linear-gradient(135deg, var(--accent-red), #cc2233); }
+
+    /* ===== TOAST ===== */
+    .toast {
+      position: fixed; bottom: 30px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--bg-card); border: 1px solid var(--border-light);
+      border-radius: 24px; padding: 10px 20px; font-size: 13px;
+      color: var(--text-primary); z-index: 200; opacity: 0;
+      transition: opacity 0.3s, transform 0.3s; white-space: nowrap;
+      pointer-events: none; box-shadow: var(--shadow);
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.success { border-color: var(--accent-green); color: var(--accent-green); }
+    .toast.error   { border-color: var(--accent-red);   color: var(--accent-red); }
+
+    .scroll-top-btn {
+      position: fixed; bottom: 80px; right: 16px; width: 40px; height: 40px;
+      border-radius: 50%; background: var(--bg-card); border: 1px solid var(--border-light);
+      color: var(--accent-cyan); font-size: 18px; cursor: pointer; z-index: 50;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s; box-shadow: var(--shadow);
+    }
+    .scroll-top-btn.visible { opacity: 1; pointer-events: all; }
+
+    #file-input { display: none; }
+
+    @media (max-width: 360px) {
+      .cut-select { width: 62px; font-size: 12px; }
+      .btn-save, .btn-load { padding: 7px 8px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== WELCOME SCREEN ===== -->
+<div class="screen" id="welcome-screen">
+  <div class="welcome-header">
+    <div class="app-logo">
+      <div class="logo-mark">TS</div>
+      <div class="app-title">アニメ タイムシート</div>
+    </div>
+    <div class="app-subtitle">ANIMATION TIMESHEET MANAGER</div>
+  </div>
+  <div class="welcome-actions">
+    <button class="btn-new-project" id="btn-new-project">＋ 新規プロジェクト</button>
+  </div>
+  <div class="project-list-header">
+    <span class="project-list-title">プロジェクト一覧</span>
+    <span class="project-count" id="project-count">0 件</span>
+  </div>
+  <div class="project-list" id="project-list">
+    <div class="empty-state" id="empty-state">
+      <div class="empty-state-icon">📋</div>
+      <div class="empty-state-text">プロジェクトがありません<br>「新規プロジェクト」から作成してください</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN SCREEN ===== -->
+<div class="screen hidden" id="main-screen">
+  <div class="main-header">
+    <div class="header-top">
+      <button class="btn-back" id="btn-back">◀</button>
+      <span class="project-name-display" id="project-name-display">プロジェクト名</span>
+    </div>
+    <div class="header-controls">
+      <div class="cut-no-section">
+        <span class="cut-label">カットNo</span>
+        <div class="cut-stepper">
+          <button class="cut-stepper-btn" id="cut-prev">‹</button>
+          <select class="cut-select" id="cut-select"></select>
+          <button class="cut-stepper-btn" id="cut-next">›</button>
+        </div>
+        <!-- カット数 ± -->
+        <div class="cut-count-wrap">
+          <span class="cut-count-lbl">枚数</span>
+          <button class="cut-count-btn" id="cut-count-minus">−</button>
+          <span class="cut-count-val" id="cut-count-val">10</span>
+          <button class="cut-count-btn" id="cut-count-plus">＋</button>
+        </div>
+      </div>
+      <div class="header-btns">
+        <button class="btn-save" id="btn-save">保存</button>
+        <button class="btn-load" id="btn-load">読込</button>
+      </div>
+    </div>
+    <div class="autosave-indicator" id="autosave-indicator">✓ 自動保存しました</div>
+  </div>
+
+  <div class="table-wrapper">
+    <div class="table-header">
+      <div class="th">Frame</div>
+      <div class="th">Voice</div>
+      <div class="th">S/E</div>
+      <div class="th">MEMO</div>
+    </div>
+    <div class="vscroll-container" id="vscroll-container">
+      <div class="vscroll-spacer" id="vscroll-spacer"></div>
+      <div class="vscroll-viewport" id="vscroll-viewport"></div>
+    </div>
+  </div>
+</div>
+
+<button class="scroll-top-btn" id="scroll-top-btn">▲</button>
+
+<!-- Voice Picker ボトムシート -->
+<div class="voice-picker-overlay" id="voice-picker-overlay">
+  <div class="voice-picker-sheet">
+    <div class="voice-picker-title">台詞番号を選択（タップで確定）</div>
+    <div class="voice-picker-grid" id="voice-picker-grid"></div>
+    <button class="voice-picker-clear" id="voice-picker-clear">クリア（空欄にする）</button>
+  </div>
+</div>
+
+<!-- 新規プロジェクト Modal -->
+<div class="modal-overlay" id="new-project-modal">
+  <div class="modal">
+    <div class="modal-title">新規プロジェクト</div>
+    <label class="modal-label">プロジェクト名</label>
+    <input class="modal-input" id="new-project-name" type="text" placeholder="例: 第1話 Aパート" maxlength="50">
+    <div class="modal-btns">
+      <button class="btn-modal-cancel" id="new-project-cancel">キャンセル</button>
+      <button class="btn-modal-ok" id="new-project-ok">作成</button>
+    </div>
+  </div>
+</div>
+
+<!-- 削除確認 Modal -->
+<div class="modal-overlay confirm-modal" id="delete-modal">
+  <div class="modal">
+    <div class="modal-title">プロジェクトを削除</div>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;" id="delete-modal-text"></p>
+    <div class="modal-btns">
+      <button class="btn-modal-cancel" id="delete-cancel">キャンセル</button>
+      <button class="btn-modal-ok" id="delete-ok">削除</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="file-input" accept=".json">
+
+<script>
+// =============================================
+// CONSTANTS
+// =============================================
+const STORAGE_KEY  = 'anime_timesheet_projects';
+const MAX_FRAMES   = 1000;
+const MAX_VOICE    = 900;
+const MIN_CUTS     = 1;
+const MAX_CUTS_CAP = 300;
+const DEFAULT_CUTS = 10;
+const ROW_H        = 38;   // CSSの height: 38px と一致
+const OVERSCAN     = 6;    // 上下に余分に描画する行数
+
+// =============================================
+// STATE
+// =============================================
+const state = {
+  projects:         {},
+  currentProjectId: null,
+  currentCutNo:     'C-001',
+  cutCount:         DEFAULT_CUTS,
+  autosaveTimer:    null,
+  vp: {             // virtual scroll state
+    scrollEl:     null,
+    spacerEl:     null,
+    viewportEl:   null,
+    start:        -1,
+    end:          -1,
+    rafPending:   false,
+  },
+};
+
+// =============================================
+// STORAGE
+// =============================================
+function saveToStorage() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.projects)); }
+  catch(e) { showToast('保存容量が不足しています', 'error'); }
+}
+function loadFromStorage() {
+  try {
+    const d = localStorage.getItem(STORAGE_KEY);
+    if (d) state.projects = JSON.parse(d);
+  } catch(e) { state.projects = {}; }
+}
+
+// =============================================
+// HELPERS
+// =============================================
+function genId()       { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function fmtCut(n)     { return 'C-' + String(n).padStart(3,'0'); }
+function fmtFrame(n)   { return String(n).padStart(4,'0') + 'f'; }
+function fmtVoice(n)   { return n ? String(n).padStart(3,'0') : ''; }
+function esc(s)        { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function createEmptyFrames() {
+  const a = new Array(MAX_FRAMES);
+  for (let i = 0; i < MAX_FRAMES; i++) a[i] = { voice:'', se:'', memo:'' };
+  return a;
+}
+function getCutData(pid, cutNo) {
+  const p = state.projects[pid];
+  if (!p) return null;
+  if (!p.cuts[cutNo]) p.cuts[cutNo] = createEmptyFrames();
+  return p.cuts[cutNo];
+}
+function cutIdx(cutNo) { return parseInt(cutNo.slice(2), 10); }
+
+// =============================================
+// TOAST / AUTOSAVE UI
+// =============================================
+let _toastTimer = null;
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { t.className = 'toast'; }, 2500);
+}
+
+let _asTimer = null;
+function showAutosaveHint() {
+  const el = document.getElementById('autosave-indicator');
+  el.classList.add('visible');
+  clearTimeout(_asTimer);
+  _asTimer = setTimeout(() => el.classList.remove('visible'), 2000);
+}
+
+function scheduleAutosave() {
+  if (!state.currentProjectId) return;
+  clearTimeout(state.autosaveTimer);
+  state.autosaveTimer = setTimeout(() => { saveCurrentData(); showAutosaveHint(); }, 1500);
+}
+
+// =============================================
+// WELCOME
+// =============================================
+function renderWelcome() {
+  const list = document.getElementById('project-list');
+  const empty = document.getElementById('empty-state');
+  document.getElementById('project-count').textContent = Object.keys(state.projects).length + ' 件';
+
+  list.querySelectorAll('.project-card').forEach(c => c.remove());
+
+  const ids = Object.keys(state.projects);
+  if (!ids.length) { empty.style.display='block'; return; }
+  empty.style.display = 'none';
+
+  ids.sort((a,b) => (state.projects[b].lastModified||0) - (state.projects[a].lastModified||0));
+  ids.forEach(id => {
+    const p = state.projects[id];
+    const cutCnt = Object.keys(p.cuts||{}).length;
+    const lm = p.lastModified
+      ? new Date(p.lastModified).toLocaleDateString('ja-JP',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})
+      : '---';
+    const card = document.createElement('div');
+    card.className = 'project-card';
+    card.innerHTML = `
+      <div class="project-card-info">
+        <div class="project-card-name">${esc(p.name)}</div>
+        <div class="project-card-meta">カット${p.cutCount||DEFAULT_CUTS}枚 / 記録${cutCnt}件 ｜ ${lm}</div>
+      </div>
+      <span class="project-card-arrow">▶</span>
+      <button class="project-card-delete" data-id="${id}">✕</button>`;
+    card.addEventListener('click', e => {
+      if (e.target.classList.contains('project-card-delete')) return;
+      openProject(id);
+    });
+    card.querySelector('.project-card-delete').addEventListener('click', e => {
+      e.stopPropagation(); confirmDeleteProject(id);
+    });
+    list.appendChild(card);
+  });
+}
+
+// =============================================
+// NEW PROJECT MODAL
+// =============================================
+function showNewProjModal() {
+  const inp = document.getElementById('new-project-name');
+  inp.value = '';
+  document.getElementById('new-project-modal').classList.add('visible');
+  setTimeout(() => inp.focus(), 300);
+}
+function hideNewProjModal() { document.getElementById('new-project-modal').classList.remove('visible'); }
+
+document.getElementById('btn-new-project').addEventListener('click', showNewProjModal);
+document.getElementById('new-project-cancel').addEventListener('click', hideNewProjModal);
+document.getElementById('new-project-modal').addEventListener('click', e => { if(e.target===e.currentTarget) hideNewProjModal(); });
+document.getElementById('new-project-ok').addEventListener('click', () => {
+  const name = document.getElementById('new-project-name').value.trim();
+  if (!name) { showToast('プロジェクト名を入力してください','error'); return; }
+  const id = genId();
+  state.projects[id] = { name, cuts:{}, cutCount:DEFAULT_CUTS, created:Date.now(), lastModified:Date.now() };
+  saveToStorage(); renderWelcome(); hideNewProjModal();
+  openProject(id);
+});
+document.getElementById('new-project-name').addEventListener('keydown', e => {
+  if (e.key==='Enter') document.getElementById('new-project-ok').click();
+});
+
+// =============================================
+// DELETE MODAL
+// =============================================
+let _delId = null;
+function confirmDeleteProject(id) {
+  _delId = id;
+  document.getElementById('delete-modal-text').textContent = `「${state.projects[id].name}」を削除しますか？この操作は元に戻せません。`;
+  document.getElementById('delete-modal').classList.add('visible');
+}
+document.getElementById('delete-cancel').addEventListener('click', () => {
+  document.getElementById('delete-modal').classList.remove('visible'); _delId=null;
+});
+document.getElementById('delete-ok').addEventListener('click', () => {
+  if (_delId && state.projects[_delId]) {
+    const name = state.projects[_delId].name;
+    delete state.projects[_delId]; saveToStorage(); renderWelcome();
+    showToast(`「${name}」を削除しました`);
+  }
+  document.getElementById('delete-modal').classList.remove('visible'); _delId=null;
+});
+
+// =============================================
+// OPEN / CLOSE PROJECT
+// =============================================
+function openProject(id) {
+  state.currentProjectId = id;
+  const p = state.projects[id];
+  state.cutCount     = p.cutCount ?? DEFAULT_CUTS;
+  state.currentCutNo = 'C-001';
+
+  document.getElementById('project-name-display').textContent = p.name;
+  updateCutCountUI();
+  buildCutSelect();
+  initVirtualScroll();
+
+  document.getElementById('welcome-screen').classList.add('hidden');
+  document.getElementById('main-screen').classList.remove('hidden');
+}
+
+function goToWelcome() {
+  saveCurrentData();
+  document.getElementById('main-screen').classList.add('hidden');
+  document.getElementById('welcome-screen').classList.remove('hidden');
+  state.currentProjectId = null;
+  renderWelcome();
+}
+
+document.getElementById('btn-back').addEventListener('click', goToWelcome);
+
+// =============================================
+// CUT COUNT ± BUTTONS
+// =============================================
+function updateCutCountUI() {
+  document.getElementById('cut-count-val').textContent = state.cutCount;
+  document.getElementById('cut-count-minus').disabled = (state.cutCount <= MIN_CUTS);
+  document.getElementById('cut-count-plus').disabled  = (state.cutCount >= MAX_CUTS_CAP);
+}
+
+function changeCutCount(delta) {
+  const next = Math.min(MAX_CUTS_CAP, Math.max(MIN_CUTS, state.cutCount + delta));
+  if (next === state.cutCount) return;
+  state.cutCount = next;
+  if (state.currentProjectId) state.projects[state.currentProjectId].cutCount = next;
+
+  // 現在カットが範囲外なら先頭へ
+  if (cutIdx(state.currentCutNo) > next) {
+    state.currentCutNo = fmtCut(next);
+  }
+  updateCutCountUI();
+  buildCutSelect();
+  scheduleAutosave();
+}
+
+document.getElementById('cut-count-minus').addEventListener('click', () => changeCutCount(-1));
+document.getElementById('cut-count-plus').addEventListener('click',  () => changeCutCount(+1));
+
+// =============================================
+// CUT SELECT + STEPPER
+// =============================================
+function buildCutSelect() {
+  const sel = document.getElementById('cut-select');
+  sel.innerHTML = '';
+  for (let i = 1; i <= state.cutCount; i++) {
+    const o = document.createElement('option');
+    o.value = o.textContent = fmtCut(i);
+    sel.appendChild(o);
+  }
+  if (cutIdx(state.currentCutNo) > state.cutCount) state.currentCutNo = 'C-001';
+  sel.value = state.currentCutNo;
+  updateStepperBtns();
+}
+
+function updateStepperBtns() {
+  const i = cutIdx(state.currentCutNo);
+  document.getElementById('cut-prev').disabled = (i <= 1);
+  document.getElementById('cut-next').disabled = (i >= state.cutCount);
+}
+
+document.getElementById('cut-select').addEventListener('change', e => {
+  saveCurrentData();
+  state.currentCutNo = e.target.value;
+  updateStepperBtns();
+  resetVirtualScroll();
+});
+document.getElementById('cut-prev').addEventListener('click', () => {
+  const i = cutIdx(state.currentCutNo);
+  if (i > 1) doSwitchCut(fmtCut(i - 1));
+});
+document.getElementById('cut-next').addEventListener('click', () => {
+  const i = cutIdx(state.currentCutNo);
+  if (i < state.cutCount) doSwitchCut(fmtCut(i + 1));
+});
+function doSwitchCut(cutNo) {
+  saveCurrentData();
+  state.currentCutNo = cutNo;
+  document.getElementById('cut-select').value = cutNo;
+  updateStepperBtns();
+  resetVirtualScroll();
+}
+
+// =============================================
+// VIRTUAL SCROLL ENGINE
+// =============================================
+function initVirtualScroll() {
+  const vp = state.vp;
+  vp.scrollEl   = document.getElementById('vscroll-container');
+  vp.spacerEl   = document.getElementById('vscroll-spacer');
+  vp.viewportEl = document.getElementById('vscroll-viewport');
+  vp.start      = -1;
+  vp.end        = -1;
+
+  // 総高さ確保
+  vp.spacerEl.style.height = (MAX_FRAMES * ROW_H) + 'px';
+  vp.scrollEl.scrollTop    = 0;
+  vp.viewportEl.innerHTML  = '';
+
+  // スクロールリスナー（重複登録防止）
+  if (vp._scrollHandler) vp.scrollEl.removeEventListener('scroll', vp._scrollHandler);
+  vp._scrollHandler = () => {
+    document.getElementById('scroll-top-btn').classList.toggle('visible', vp.scrollEl.scrollTop > 200);
+    if (!vp.rafPending) {
+      vp.rafPending = true;
+      requestAnimationFrame(() => { renderVisible(); vp.rafPending = false; });
+    }
+  };
+  vp.scrollEl.addEventListener('scroll', vp._scrollHandler, {passive:true});
+
+  renderVisible();
+}
+
+function resetVirtualScroll() {
+  const vp = state.vp;
+  if (!vp.scrollEl) return;
+  vp.scrollEl.scrollTop   = 0;
+  vp.start = vp.end       = -1;
+  vp.viewportEl.innerHTML = '';
+  renderVisible();
+}
+
+function renderVisible() {
+  const vp     = state.vp;
+  const frames = getCutData(state.currentProjectId, state.currentCutNo);
+  if (!frames || !vp.scrollEl) return;
+
+  const scrollTop  = vp.scrollEl.scrollTop;
+  const ch         = vp.scrollEl.clientHeight;
+  const firstVis   = Math.floor(scrollTop / ROW_H);
+  const lastVis    = Math.min(MAX_FRAMES - 1, Math.floor((scrollTop + ch) / ROW_H));
+  const newStart   = Math.max(0, firstVis - OVERSCAN);
+  const newEnd     = Math.min(MAX_FRAMES - 1, lastVis + OVERSCAN);
+
+  if (newStart === vp.start && newEnd === vp.end) return;
+
+  // viewportをスクロール位置に合わせて移動
+  vp.viewportEl.style.transform = `translateY(${newStart * ROW_H}px)`;
+
+  const newCount = newEnd - newStart + 1;
+  const el       = vp.viewportEl;
+
+  // 行数調整（多すぎたら削除、少なければ追加）
+  while (el.children.length > newCount) el.removeChild(el.lastChild);
+  while (el.children.length < newCount) el.appendChild(makeRow());
+
+  // 各行のデータを更新
+  for (let i = 0; i < newCount; i++) {
+    const fi = newStart + i;
+    fillRow(el.children[i], fi, frames[fi]);
+  }
+
+  vp.start = newStart;
+  vp.end   = newEnd;
+}
+
+// 新しい行DOMを生成（イベントリスナーも設定）
+function makeRow() {
+  const row = document.createElement('div');
+  row.className = 'table-row even'; // クラスは fillRow で上書き
+
+  // Frame
+  const tdF = document.createElement('div');
+  tdF.className = 'td td-frame';
+  const spF = document.createElement('span');
+  tdF.appendChild(spF);
+
+  // Voice（タップでボトムシートを開く）
+  const tdV = document.createElement('div');
+  tdV.className = 'td td-voice';
+  const vDisp = document.createElement('div');
+  vDisp.className = 'voice-display empty';
+  tdV.appendChild(vDisp);
+  tdV.addEventListener('click', onVoiceCellClick);
+
+  // SE
+  const tdS = document.createElement('div');
+  tdS.className = 'td td-se';
+  const seBtn = document.createElement('button');
+  seBtn.className = 'se-btn state-empty';
+
+  let lpTimer = null, isLong = false;
+  const lpStart = () => { isLong=false; lpTimer=setTimeout(()=>{ isLong=true; execSeAction(seBtn,''); if(navigator.vibrate) navigator.vibrate(30); },500); };
+  const lpEnd   = () => { clearTimeout(lpTimer); if(!isLong) execSeClick(seBtn); isLong=false; };
+  const lpAbort = () => { clearTimeout(lpTimer); isLong=false; };
+  seBtn.addEventListener('touchstart', lpStart, {passive:true});
+  seBtn.addEventListener('touchend',   lpEnd);
+  seBtn.addEventListener('touchcancel',lpAbort);
+  seBtn.addEventListener('mousedown',  lpStart);
+  seBtn.addEventListener('mouseup',    lpEnd);
+  seBtn.addEventListener('mouseleave', lpAbort);
+  tdS.appendChild(seBtn);
+
+  // Memo
+  const tdM = document.createElement('div');
+  tdM.className = 'td td-memo';
+  const mInp = document.createElement('input');
+  mInp.type = 'text'; mInp.className = 'memo-input'; mInp.maxLength = 100;
+  mInp.addEventListener('input', onMemoInput);
+  tdM.appendChild(mInp);
+
+  row.appendChild(tdF); row.appendChild(tdV);
+  row.appendChild(tdS); row.appendChild(tdM);
+  return row;
+}
+
+// 行のデータを更新（DOMを再利用）
+function fillRow(row, fi, data) {
+  row.dataset.frameIdx = fi;
+
+  // 偶奇クラス
+  row.className = 'table-row ' + (fi % 2 === 0 ? 'even' : 'odd');
+  if      (data.se==='S') row.classList.add('se-start');
+  else if (data.se==='E') row.classList.add('se-end');
+
+  // Frame
+  row.children[0].firstChild.textContent = fmtFrame(fi + 1);
+
+  // Voice
+  const vd = row.children[1].firstChild;
+  if (data.voice) {
+    vd.textContent = fmtVoice(parseInt(data.voice,10));
+    vd.className = 'voice-display';
+  } else {
+    vd.textContent = '';
+    vd.className = 'voice-display empty';
+  }
+
+  // SE
+  const sb = row.children[2].firstChild;
+  sb.dataset.seState = data.se || '';
+  applySeAppearance(sb, data.se || '');
+
+  // Memo（フォーカス中は上書きしない）
+  const mi = row.children[3].firstChild;
+  if (document.activeElement !== mi) mi.value = data.memo || '';
+}
+
+// =============================================
+// SE ロジック
+// =============================================
+function applySeAppearance(btn, s) {
+  btn.classList.remove('state-s','state-e','state-empty');
+  if      (s==='S') { btn.textContent='S'; btn.classList.add('state-s'); }
+  else if (s==='E') { btn.textContent='E'; btn.classList.add('state-e'); }
+  else              { btn.textContent='';  btn.classList.add('state-empty'); }
+}
+
+function execSeClick(btn) {
+  const c = btn.dataset.seState;
+  execSeAction(btn, c==='' ? 'S' : c==='S' ? 'E' : '');
+}
+
+function execSeAction(btn, next) {
+  const row    = btn.closest('.table-row');
+  const fi     = parseInt(row.dataset.frameIdx, 10);
+  const frames = getCutData(state.currentProjectId, state.currentCutNo);
+  frames[fi].se = next;
+  btn.dataset.seState = next;
+  applySeAppearance(btn, next);
+  row.classList.remove('se-start','se-end');
+  if (next==='S') row.classList.add('se-start');
+  else if (next==='E') row.classList.add('se-end');
+  scheduleAutosave();
+}
+
+// =============================================
+// MEMO ロジック
+// =============================================
+function onMemoInput(e) {
+  const row    = e.target.closest('.table-row');
+  const fi     = parseInt(row.dataset.frameIdx, 10);
+  const frames = getCutData(state.currentProjectId, state.currentCutNo);
+  frames[fi].memo = e.target.value;
+  scheduleAutosave();
+}
+
+// =============================================
+// VOICE PICKER ボトムシート
+// =============================================
+let _vpFrameIdx = -1;
+
+// グリッドは最初の1回だけ構築
+function buildVoiceGrid() {
+  const grid = document.getElementById('voice-picker-grid');
+  if (grid.children.length > 0) return;
+  const frag = document.createDocumentFragment();
+  for (let v = 1; v <= MAX_VOICE; v++) {
+    const item = document.createElement('div');
+    item.className = 'voice-picker-item';
+    item.textContent = fmtVoice(v);
+    item.dataset.val = String(v);
+    item.addEventListener('click', onVoicePickerTap);
+    frag.appendChild(item);
+  }
+  grid.appendChild(frag);
+}
+
+function onVoiceCellClick(e) {
+  const row = e.currentTarget.closest('.table-row');
+  _vpFrameIdx = parseInt(row.dataset.frameIdx, 10);
+  buildVoiceGrid();
+
+  const frames = getCutData(state.currentProjectId, state.currentCutNo);
+  const cur    = frames[_vpFrameIdx].voice || '';
+  const grid   = document.getElementById('voice-picker-grid');
+  grid.querySelectorAll('.voice-picker-item').forEach(it => {
+    it.classList.toggle('selected', it.dataset.val === cur);
+  });
+  const sel = grid.querySelector('.selected');
+  if (sel) setTimeout(() => sel.scrollIntoView({block:'center', behavior:'instant'}), 60);
+
+  document.getElementById('voice-picker-overlay').classList.add('visible');
+}
+
+function onVoicePickerTap(e) { commitVoice(e.currentTarget.dataset.val); }
+document.getElementById('voice-picker-clear').addEventListener('click', () => commitVoice(''));
+document.getElementById('voice-picker-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeVoicePicker();
+});
+
+function commitVoice(val) {
+  if (_vpFrameIdx < 0) return;
+  const frames = getCutData(state.currentProjectId, state.currentCutNo);
+  frames[_vpFrameIdx].voice = val;
+  scheduleAutosave();
+  // 表示を即時更新
+  const vp = state.vp;
+  if (vp.viewportEl) {
+    const fi = _vpFrameIdx;
+    for (const row of vp.viewportEl.children) {
+      if (parseInt(row.dataset.frameIdx,10) === fi) {
+        fillRow(row, fi, frames[fi]);
+        break;
+      }
+    }
+  }
+  closeVoicePicker();
+}
+
+function closeVoicePicker() {
+  document.getElementById('voice-picker-overlay').classList.remove('visible');
+  _vpFrameIdx = -1;
+}
+
+// =============================================
+// SAVE / LOAD
+// =============================================
+function saveCurrentData() {
+  if (!state.currentProjectId) return;
+  const p = state.projects[state.currentProjectId];
+  if (p) { p.lastModified=Date.now(); p.cutCount=state.cutCount; }
+  saveToStorage();
+}
+
+document.getElementById('btn-save').addEventListener('click', () => {
+  if (!state.currentProjectId) return;
+  saveCurrentData(); showToast('保存しました ✓','success');
+});
+document.getElementById('btn-load').addEventListener('click', () => {
+  document.getElementById('file-input').click();
+});
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const imp = JSON.parse(ev.target.result);
+      if (!imp.name || !imp.cuts) throw new Error();
+      const id = genId();
+      state.projects[id] = {
+        name: imp.name+'（読込）', cuts: imp.cuts,
+        cutCount: imp.cutCount ?? DEFAULT_CUTS,
+        created: Date.now(), lastModified: Date.now(),
+      };
+      saveToStorage(); showToast(`「${imp.name}」を読み込みました`,'success');
+      openProject(id);
+    } catch { showToast('ファイルの読み込みに失敗しました','error'); }
+  };
+  reader.readAsText(file); e.target.value = '';
+});
+
+// =============================================
+// SCROLL TOP
+// =============================================
+document.getElementById('scroll-top-btn').addEventListener('click', () => {
+  state.vp.scrollEl?.scrollTo({top:0, behavior:'smooth'});
+});
+
+// =============================================
+// INIT
+// =============================================
+loadFromStorage();
+renderWelcome();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
